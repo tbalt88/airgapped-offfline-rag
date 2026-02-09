@@ -19,6 +19,12 @@ import pytest
 from unittest.mock import patch, MagicMock
 from app.document_processor import get_embedding_function, process_documents
 
+@pytest.fixture(autouse=True)
+def clear_embedding_function_cache():
+    get_embedding_function.clear()
+    yield
+    get_embedding_function.clear()
+
 @patch('app.document_processor.config')
 @patch('app.document_processor.FastEmbedEmbeddings')
 def test_get_embedding_function(mock_fastembed, mock_config):
@@ -29,8 +35,21 @@ def test_get_embedding_function(mock_fastembed, mock_config):
         model_name='sentence-transformers/all-MiniLM-L6-v2',
         max_length=512,
         doc_embed_type="passage",
-        cache_dir="./models"
+        cache_dir="./cache"
     )
+
+@patch('app.document_processor.st.error')
+@patch('langchain_community.embeddings.HuggingFaceEmbeddings')
+@patch('app.document_processor.FastEmbedEmbeddings', side_effect=RuntimeError('boom'))
+def test_get_embedding_function_falls_back_to_huggingface(
+    _mock_fastembed,
+    mock_huggingface,
+    mock_st_error,
+):
+    get_embedding_function()
+
+    mock_huggingface.assert_called_once_with(cache_folder="./cache")
+    mock_st_error.assert_called_once()
 
 @patch('app.document_processor.os.path.exists', return_value=False)
 @patch('app.document_processor.os.makedirs')
