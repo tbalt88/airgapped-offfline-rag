@@ -39,7 +39,6 @@ jobs:
           --tmpfs /tmp \
           --tmpfs /var/run \
           --tmpfs /var/log \
-          --tmpfs /app/documents \
           offline-airgapped-rag
 
     - name: Wait for container to start
